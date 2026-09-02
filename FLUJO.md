@@ -1,10 +1,11 @@
 # 1. Estado inicial / Splash
 
-| Elemento | Detalle | 
-| Qué ve el usuario | Logo de la app + indicador de carga breve | 
-| Qué hace en segundo plano | Verifica si existe una sesión guardada (token/local storage) | 
-| Resultado esperado | Si hay sesión activa → navega directo a Home autenticado. Si no hay sesión → navega a Autenticación | 
-| Tiempo objetivo| < 2 segundos, sin bloquear la UI | 
+| Elemento | Detalle |
+|---|---|
+| Qué ve el usuario | Logo de la app + indicador de carga breve |
+| Qué hace en segundo plano | Verifica si existe una sesión guardada (token/local storage) |
+| Resultado esperado | Si hay sesión activa → navega directo a Home autenticado. Si no hay sesión → navega a Autenticación |
+| Tiempo objetivo | < 2 segundos, sin bloquear la UI |
 
 # 2. Autenticación
 ## 2.1 Login
