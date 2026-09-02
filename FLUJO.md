@@ -1,7 +1,5 @@
 # 1. Estado inicial / Splash
 
-Kotlin es un lenguaje de **tipado estático** (cada dato tiene un tipo bien definido), pero tiene **inferencia de tipos** inteligente: el compilador adivina el tipo automáticamente si le das un valor inicial.
-
 | Elemento | Detalle | 
 | Qué ve el usuario | Logo de la app + indicador de carga breve | 
 | Qué hace en segundo plano | Verifica si existe una sesión guardada (token/local storage) | 
