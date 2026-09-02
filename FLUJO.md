@@ -32,5 +32,5 @@ Si el usuario autenticado tiene rol de administrador, el Home expone además un 
 - Gestión de destinos
 - Gestión de paquetes turísticos
 - Reportes y estadísticas
-# 4
+# 4 Diagrama de FLUJO
 _Siguiente: [Siga para ver el diagrama→](README.md)_
