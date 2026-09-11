@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "660316606499",
+    "project_id": "listainfinita-44a3b",
+    "storage_bucket": "listainfinita-44a3b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:660316606499:android:48e0eebe7fc357e5c92196",
+        "android_client_info": {
+          "package_name": "com.example.listainfinita"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKdMOIkR4A2yQZ7lWmwlvIzzOcEur-PIs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
