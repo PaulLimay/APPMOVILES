@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "16157989259",
+    "project_id": "controlaforo-8773b",
+    "storage_bucket": "controlaforo-8773b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:16157989259:android:1876e78cdc7ad67d77778e",
+        "android_client_info": {
+          "package_name": "com.example.controlaforo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDa461nC3IkHPvs28HMCoO7bLy-3PuscFM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
