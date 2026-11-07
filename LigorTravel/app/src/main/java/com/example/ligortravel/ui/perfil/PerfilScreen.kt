@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.CardTravel
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -56,6 +57,7 @@ import com.example.ligortravel.ui.components.CampoPassword
 fun PerfilScreen(
     onCerrarSesion: () -> Unit,
     onIrAMisReservas: () -> Unit,
+    onIrAAdmin: () -> Unit,
     viewModel: PerfilViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -130,6 +132,19 @@ fun PerfilScreen(
                 Icon(imageVector = Icons.Filled.CardTravel, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Mis reservas")
+            }
+
+            if (uiState.esAdmin) {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onIrAAdmin,
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(imageVector = Icons.Filled.AdminPanelSettings, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Panel de administración")
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

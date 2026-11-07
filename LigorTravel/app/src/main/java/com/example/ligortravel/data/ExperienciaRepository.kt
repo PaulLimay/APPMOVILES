@@ -4,10 +4,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.tasks.await
 
 class ExperienciaRepository(
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
 
     private val experiencias = firestore.collection("experiencias")
@@ -46,27 +45,5 @@ class ExperienciaRepository(
             }
         }
         awaitClose { registro.remove() }
-    }
-
-    // Siembra temporal: agrega los campos del detalle a los documentos existentes.
-    // Borrar esta función (y DetallesIniciales.kt) una vez que los datos estén en Firestore.
-    // Usa update() y no set(): update solo agrega/reemplaza los campos indicados y deja
-    // intactos los demás (titulo, precio, orden...).
-    suspend fun completarDetallesSiFaltan(detalles: Map<String, Map<String, Any>>): Result<Boolean> = try {
-        // Si el primer destino ya tiene galería, la siembra ya corrió: no se vuelve a escribir.
-        // (Se revisa "galeria" y no "descripcion" porque la galería se agregó después: si la
-        // primera versión de la siembra ya subió las descripciones, esta igual debe correr.)
-        val galeria = experiencias.document(detalles.keys.first()).get().await().get("galeria")
-        val yaSembrado = galeria is List<*> && galeria.isNotEmpty()
-        if (!yaSembrado) {
-            val lote = firestore.batch()
-            detalles.forEach { (id, campos) ->
-                lote.update(experiencias.document(id), campos)
-            }
-            lote.commit().await()
-        }
-        Result.success(!yaSembrado)
-    } catch (e: Exception) {
-        Result.failure(e)
     }
 }

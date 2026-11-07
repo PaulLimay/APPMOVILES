@@ -41,6 +41,12 @@ class AuthRepository(
     } catch (e: Exception) {
         Result.failure(Exception(mensajeError(e)))
     }
+    suspend fun restablecerPassword(): Result<Unit> = try{
+        Result.success(Unit)
+
+    } catch (e: Exception) {
+        Result.failure(Exception(mensajeError(e)))
+    }
 
     fun cerrarSesion() {
         auth.signOut()

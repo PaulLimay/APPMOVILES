@@ -34,5 +34,12 @@ data class Experiencia(
     // Lo que incluye el tour, ej. ["Transporte", "Guía", "Almuerzo"].
     val incluye: List<String> = emptyList(),
     // Ej. "Mayo a septiembre (temporada seca)".
-    val mejorEpoca: String? = null
+    val mejorEpoca: String? = null,
+
+    // --- Calificación de los turistas ---
+    // Suma de las estrellas y cantidad de reseñas. Se actualizan en la misma transacción que
+    // cada reseña (ver ResenaRepository); el promedio es suma / total (ReglasResenas.promedio).
+    // "rating" quedó del catálogo inicial (lo escribía el administrador) y ya no se muestra.
+    val sumaEstrellas: Int = 0,
+    val totalResenas: Int = 0
 )

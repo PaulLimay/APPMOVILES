@@ -1,0 +1,54 @@
+ M .idea/deploymentTargetSelector.xml
+A  .idea/deviceManager.xml
+ M CLAUDE.md
+ M app/build.gradle.kts
+ M app/src/main/AndroidManifest.xml
+ M app/src/main/java/com/example/ligortravel/data/AuthRepository.kt
+ M app/src/main/java/com/example/ligortravel/data/ChatModelos.kt
+ M app/src/main/java/com/example/ligortravel/data/ChatRepository.kt
+ D app/src/main/java/com/example/ligortravel/data/DetallesIniciales.kt
+ M app/src/main/java/com/example/ligortravel/data/Experiencia.kt
+ M app/src/main/java/com/example/ligortravel/data/ExperienciaRepository.kt
+ M app/src/main/java/com/example/ligortravel/data/Paquete.kt
+ M app/src/main/java/com/example/ligortravel/data/PaqueteRepository.kt
+ D app/src/main/java/com/example/ligortravel/data/PaquetesIniciales.kt
+ M app/src/main/java/com/example/ligortravel/data/Reserva.kt
+ M app/src/main/java/com/example/ligortravel/data/ReservaRepository.kt
+ M app/src/main/java/com/example/ligortravel/ui/auth/AuthScreen.kt
+ M app/src/main/java/com/example/ligortravel/ui/chat/ChatScreen.kt
+ M app/src/main/java/com/example/ligortravel/ui/detalle/DetalleScreen.kt
+ M app/src/main/java/com/example/ligortravel/ui/detalle/DetalleViewModel.kt
+AM app/src/main/java/com/example/ligortravel/ui/favoritos/FavoritosScreen.kt
+ M app/src/main/java/com/example/ligortravel/ui/home/HomeScreen.kt
+ M app/src/main/java/com/example/ligortravel/ui/home/HomeViewModel.kt
+ M app/src/main/java/com/example/ligortravel/ui/misreservas/HistorialReservas.kt
+ M app/src/main/java/com/example/ligortravel/ui/misreservas/MisReservasScreen.kt
+ M app/src/main/java/com/example/ligortravel/ui/misreservas/MisReservasViewModel.kt
+ M app/src/main/java/com/example/ligortravel/ui/navigation/LigorNavGraph.kt
+ M app/src/main/java/com/example/ligortravel/ui/paquetes/DetallePaqueteScreen.kt
+ M app/src/main/java/com/example/ligortravel/ui/paquetes/PaquetesScreen.kt
+ M app/src/main/java/com/example/ligortravel/ui/perfil/PerfilScreen.kt
+ M app/src/main/java/com/example/ligortravel/ui/perfil/PerfilViewModel.kt
+AM "app/src/main/java/com/example/ligortravel/ui/recuperarcontrase\303\261a/RecuperarPasswordScreen.kt"
+A  "app/src/main/java/com/example/ligortravel/ui/recuperarcontrase\303\261a/RecuperarPasswordVieewModel.kt"
+ M app/src/main/java/com/example/ligortravel/ui/reserva/ReglasReserva.kt
+ M app/src/main/java/com/example/ligortravel/ui/reserva/ReservaScreen.kt
+ M app/src/main/java/com/example/ligortravel/ui/reserva/ReservaViewModel.kt
+ M app/src/test/java/com/example/ligortravel/ui/misreservas/HistorialReservasTest.kt
+ M app/src/test/java/com/example/ligortravel/ui/reserva/ReglasReservaTest.kt
+?? app/src/main/java/com/example/ligortravel/data/AdminRepository.kt
+?? app/src/main/java/com/example/ligortravel/data/FotoRepository.kt
+?? app/src/main/java/com/example/ligortravel/data/Resena.kt
+?? app/src/main/java/com/example/ligortravel/data/ResenaRepository.kt
+?? app/src/main/java/com/example/ligortravel/ui/admin/
+?? app/src/main/java/com/example/ligortravel/ui/components/EtiquetaEstadoReserva.kt
+?? app/src/main/java/com/example/ligortravel/ui/components/ImagenCatalogo.kt
+?? app/src/main/java/com/example/ligortravel/ui/detalle/ReglasResenas.kt
+?? app/src/main/java/com/example/ligortravel/ui/detalle/SeccionResenas.kt
+?? app/src/main/java/com/example/ligortravel/ui/mapa/
+?? app/src/main/java/com/example/ligortravel/ui/misreservas/ReglasCancelacion.kt
+?? app/src/test/java/com/example/ligortravel/ui/admin/
+?? app/src/test/java/com/example/ligortravel/ui/detalle/
+?? app/src/test/java/com/example/ligortravel/ui/mapa/
+?? app/src/test/java/com/example/ligortravel/ui/misreservas/ReglasCancelacionTest.kt
+?? firestore.rules

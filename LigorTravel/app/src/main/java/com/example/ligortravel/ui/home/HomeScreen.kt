@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.CardTravel
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Hiking
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,12 +65,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ligortravel.data.Experiencia
+import com.example.ligortravel.ui.components.ImagenCatalogo
+import com.example.ligortravel.ui.detalle.ReglasResenas
 
 @Composable
 fun HomeScreen(
     onIrAPerfil: () -> Unit,
     onAbrirDetalle: (experienciaId: String) -> Unit,
     onIrAPaquetes: () -> Unit,
+    onIrAlChat: () -> Unit,
+    onIrAlMapa: () -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -139,8 +145,20 @@ fun HomeScreen(
             BottomNavHome(
                 onIrAPerfil = onIrAPerfil,
                 onIrAPaquetes = onIrAPaquetes,
+                onIrAlMapa = onIrAlMapa,
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
+
+            FloatingActionButton(
+                onClick = onIrAlChat,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 20.dp, bottom = 100.dp)
+            ) {
+                Icon(imageVector = Icons.Filled.Hiking, contentDescription = "Chat con Ligor")
+            }
         }
     }
 }
@@ -324,15 +342,11 @@ private fun FilaResultado(experiencia: Experiencia, onClick: () -> Unit) {
                 .background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center
         ) {
-            val imagenRes = imagenDeExperiencia(experiencia.imagen)
-            if (imagenRes != null) {
-                Image(
-                    painter = painterResource(imagenRes),
-                    contentDescription = experiencia.titulo,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
+            ImagenCatalogo(
+                referencia = experiencia.imagen,
+                contentDescription = experiencia.titulo,
+                modifier = Modifier.fillMaxSize()
+            ) {
                 Icon(
                     imageVector = Icons.Filled.Image,
                     contentDescription = null,
@@ -395,15 +409,11 @@ private fun TarjetaExperienciaDestacada(experiencia: Experiencia, onClick: () ->
             .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick)
     ) {
-        val imagenRes = imagenDeExperiencia(experiencia.imagen)
-        if (imagenRes != null) {
-            Image(
-                painter = painterResource(imagenRes),
-                contentDescription = experiencia.titulo,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
+        ImagenCatalogo(
+            referencia = experiencia.imagen,
+            contentDescription = experiencia.titulo,
+            modifier = Modifier.fillMaxSize()
+        ) {
             // Placeholder de imagen: esta experiencia todavía no tiene una foto asignada.
             Icon(
                 imageVector = Icons.Filled.Image,
@@ -503,7 +513,7 @@ private fun TarjetaExperienciaDestacada(experiencia: Experiencia, onClick: () ->
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = experiencia.rating.toString(),
+                        text = ReglasResenas.textoPromedio(experiencia),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
@@ -572,15 +582,11 @@ private fun TarjetaExperienciaLocal(experiencia: Experiencia, onClick: () -> Uni
                 .background(MaterialTheme.colorScheme.surface),
             contentAlignment = Alignment.Center
         ) {
-            val imagenRes = imagenDeExperiencia(experiencia.imagen)
-            if (imagenRes != null) {
-                Image(
-                    painter = painterResource(imagenRes),
-                    contentDescription = experiencia.titulo,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
+            ImagenCatalogo(
+                referencia = experiencia.imagen,
+                contentDescription = experiencia.titulo,
+                modifier = Modifier.fillMaxSize()
+            ) {
                 Icon(
                     imageVector = Icons.Filled.Image,
                     contentDescription = null,
@@ -609,6 +615,7 @@ private fun TarjetaExperienciaLocal(experiencia: Experiencia, onClick: () -> Uni
 private fun BottomNavHome(
     onIrAPerfil: () -> Unit,
     onIrAPaquetes: () -> Unit,
+    onIrAlMapa: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -623,8 +630,8 @@ private fun BottomNavHome(
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             ItemNavInicio()
-            // Explorar y Favoritos: solo visuales, sin funcionalidad por ahora.
-            ItemNavVisual(icono = Icons.Filled.Explore, etiqueta = "Explorar")
+            // Explorar abre el mapa con los destinos; Favoritos sigue siendo solo visual.
+            ItemNavVisual(icono = Icons.Filled.Explore, etiqueta = "Explorar", onClick = onIrAlMapa)
             // Viajes abre el listado de paquetes turísticos.
             ItemNavVisual(icono = Icons.Filled.CardTravel, etiqueta = "Viajes", onClick = onIrAPaquetes)
             ItemNavVisual(icono = Icons.Filled.FavoriteBorder, etiqueta = "Favoritos")

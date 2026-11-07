@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ligortravel.data.Experiencia
-import com.example.ligortravel.ui.home.imagenDeExperiencia
+import com.example.ligortravel.ui.components.ImagenCatalogo
 
 @Composable
 fun PaquetesScreen(
@@ -180,15 +180,11 @@ private fun TarjetaPaquete(resumen: PaqueteResumen, onClick: () -> Unit) {
                 .height(150.dp)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            val imagenRes = imagenDeExperiencia(paquete.imagen)
-            if (imagenRes != null) {
-                Image(
-                    painter = painterResource(imagenRes),
-                    contentDescription = paquete.titulo,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
+            ImagenCatalogo(
+                referencia = paquete.imagen,
+                contentDescription = paquete.titulo,
+                modifier = Modifier.fillMaxSize()
+            ) {
                 Icon(
                     imageVector = Icons.Filled.Image,
                     contentDescription = null,

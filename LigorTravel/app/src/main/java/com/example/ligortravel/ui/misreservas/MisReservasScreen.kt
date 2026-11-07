@@ -1,6 +1,7 @@
 package com.example.ligortravel.ui.misreservas
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,18 +21,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CardTravel
+import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,7 +49,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ligortravel.data.Reserva
 import com.example.ligortravel.ui.components.BotonVolver
+import com.example.ligortravel.ui.components.EtiquetaEstadoReserva
 import com.example.ligortravel.ui.components.TabPill
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -54,7 +61,7 @@ private val localePeru = Locale.forLanguageTag("es-PE")
 private val formatoMes = DateTimeFormatter.ofPattern("MMM", localePeru)
 private val formatoFechaLarga = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM, yyyy", localePeru)
 
-private enum class PestanaReservas { PROXIMOS, REALIZADOS }
+private enum class PestanaReservas { PROXIMOS, REALIZADOS, CANCELADAS }
 
 @Composable
 fun MisReservasScreen(
@@ -66,6 +73,8 @@ fun MisReservasScreen(
     // La pestaña elegida es estado de la UI (no del negocio), igual que el tab de AuthScreen.
     // rememberSaveable la conserva al rotar la pantalla o al volver desde otra.
     var pestana by rememberSaveable { mutableStateOf(PestanaReservas.PROXIMOS) }
+    // Reserva elegida para cancelar: mientras no sea null se muestra el diálogo de confirmación.
+    var reservaACancelar by remember { mutableStateOf<Reserva?>(null) }
 
     Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -75,8 +84,21 @@ fun MisReservasScreen(
                 seleccionada = pestana,
                 cantidadProximos = uiState.proximas.size,
                 cantidadRealizados = uiState.realizadas.size,
+                cantidadCanceladas = uiState.canceladas.size,
                 onSeleccionar = { pestana = it }
             )
+
+            uiState.errorCancelacion?.let { error ->
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 12.dp)
+                        .clickable(onClick = viewModel::limpiarErrorCancelacion)
+                )
+            }
 
             when {
                 uiState.cargando -> MensajeCentrado {
@@ -91,20 +113,51 @@ fun MisReservasScreen(
                     )
                 }
                 else -> {
-                    val reservas = if (pestana == PestanaReservas.PROXIMOS) uiState.proximas
-                    else uiState.realizadas
+                    val reservas = when (pestana) {
+                        PestanaReservas.PROXIMOS -> uiState.proximas
+                        PestanaReservas.REALIZADOS -> uiState.realizadas
+                        PestanaReservas.CANCELADAS -> uiState.canceladas
+                    }
                     if (reservas.isEmpty()) {
                         ListaVacia(pestana, onVerPaquetes)
                     } else {
                         ListaReservas(
                             reservas = reservas,
                             esProximo = pestana == PestanaReservas.PROXIMOS,
-                            hoy = uiState.hoy
+                            hoy = uiState.hoy,
+                            cancelandoId = uiState.cancelandoId,
+                            motivoNoCancelable = viewModel::motivoNoCancelable,
+                            onCancelar = { reservaACancelar = it }
                         )
                     }
                 }
             }
         }
+    }
+
+    reservaACancelar?.let { reserva ->
+        AlertDialog(
+            onDismissRequest = { reservaACancelar = null },
+            title = { Text("¿Cancelar tu reserva?") },
+            text = {
+                Text(
+                    "${reserva.paqueteTitulo} para ${reserva.personas} " +
+                        (if (reserva.personas == 1) "persona" else "personas") +
+                        ". Los cupos se liberarán para otros viajeros. Esta acción no se puede deshacer."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.cancelar(reserva)
+                    reservaACancelar = null
+                }) {
+                    Text("Sí, cancelar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { reservaACancelar = null }) { Text("Volver") }
+            }
+        )
     }
 }
 
@@ -133,6 +186,7 @@ private fun SelectorPestanas(
     seleccionada: PestanaReservas,
     cantidadProximos: Int,
     cantidadRealizados: Int,
+    cantidadCanceladas: Int,
     onSeleccionar: (PestanaReservas) -> Unit
 ) {
     Row(
@@ -153,11 +207,23 @@ private fun SelectorPestanas(
             seleccionada = seleccionada == PestanaReservas.REALIZADOS,
             modifier = Modifier.weight(1f)
         ) { onSeleccionar(PestanaReservas.REALIZADOS) }
+        TabPill(
+            texto = "Canceladas ($cantidadCanceladas)",
+            seleccionada = seleccionada == PestanaReservas.CANCELADAS,
+            modifier = Modifier.weight(1f)
+        ) { onSeleccionar(PestanaReservas.CANCELADAS) }
     }
 }
 
 @Composable
-private fun ListaReservas(reservas: List<ReservaConFecha>, esProximo: Boolean, hoy: LocalDate) {
+private fun ListaReservas(
+    reservas: List<ReservaConFecha>,
+    esProximo: Boolean,
+    hoy: LocalDate,
+    cancelandoId: String?,
+    motivoNoCancelable: (Reserva) -> String?,
+    onCancelar: (Reserva) -> Unit
+) {
     LazyColumn(
         modifier = Modifier.navigationBarsPadding(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
@@ -166,75 +232,148 @@ private fun ListaReservas(reservas: List<ReservaConFecha>, esProximo: Boolean, h
         // key: igual que en PaquetesScreen, para que Compose no confunda tarjetas si la lista
         // cambia en tiempo real (por ejemplo, al llegar una reserva nueva).
         items(reservas, key = { it.reserva.id }) { item ->
-            TarjetaReserva(item, esProximo, hoy)
+            TarjetaReserva(
+                item = item,
+                esProximo = esProximo,
+                hoy = hoy,
+                cancelando = cancelandoId == item.reserva.id,
+                motivoNoCancelable = if (esProximo) motivoNoCancelable(item.reserva) else null,
+                onCancelar = { onCancelar(item.reserva) }
+            )
         }
     }
 }
 
 @Composable
-private fun TarjetaReserva(item: ReservaConFecha, esProximo: Boolean, hoy: LocalDate) {
+private fun TarjetaReserva(
+    item: ReservaConFecha,
+    esProximo: Boolean,
+    hoy: LocalDate,
+    cancelando: Boolean,
+    motivoNoCancelable: String?,
+    onCancelar: () -> Unit
+) {
     val reserva = item.reserva
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.surface)
-            // Los viajes realizados se ven un poco apagados: ya son historia.
-            .alpha(if (esProximo) 1f else 0.75f)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        InsigniaFecha(item.fecha, resaltada = esProximo)
-        Spacer(modifier = Modifier.width(14.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                // Los viajes realizados y cancelados se ven un poco apagados: ya son historia.
+                .alpha(if (esProximo) 1f else 0.75f)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            InsigniaFecha(item.fecha, resaltada = esProximo)
+            Spacer(modifier = Modifier.width(14.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = reserva.paqueteTitulo,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
-            )
-            Text(
-                text = item.fecha.format(formatoFechaLarga).replaceFirstChar { it.uppercase() },
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Filled.People,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (reserva.personas == 1) "1 persona" else "${reserva.personas} personas",
+                    text = reserva.paqueteTitulo,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Text(
+                    text = item.fecha.format(formatoFechaLarga).replaceFirstChar { it.uppercase() },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "S/ ${reserva.total}",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.People,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (reserva.personas == 1) "1 persona" else "${reserva.personas} personas",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "S/ ${reserva.total}",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    EtiquetaEstadoReserva(ReglasCancelacion.estadoVisible(reserva, hoy))
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = if (esProximo) textoCuentaRegresiva(item.fecha, hoy)
+                        else "Cód. ${reserva.id.take(8).uppercase()}",
+                        color = if (esProximo) MaterialTheme.colorScheme.secondary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                        fontWeight = if (esProximo) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                EtiquetaEstado(textoEstado(reserva.estado))
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = if (esProximo) textoCuentaRegresiva(item.fecha, hoy)
-                    else "Cód. ${reserva.id.take(8).uppercase()}",
-                    color = if (esProximo) MaterialTheme.colorScheme.secondary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp,
-                    fontWeight = if (esProximo) FontWeight.Bold else FontWeight.Normal
-                )
+        }
+        PieTarjeta(reserva, esProximo, cancelando, motivoNoCancelable, onCancelar)
+    }
+}
+
+// Parte inferior de la tarjeta: el botón para cancelar o, si no se puede, el motivo.
+@Composable
+private fun PieTarjeta(
+    reserva: Reserva,
+    esProximo: Boolean,
+    cancelando: Boolean,
+    motivoNoCancelable: String?,
+    onCancelar: () -> Unit
+) {
+    val texto = when {
+        reserva.estado == Reserva.ESTADO_CANCELADA ->
+            if (reserva.canceladaPor == Reserva.CANCELADA_POR_ADMIN) {
+                "Cancelada por la agencia" + (reserva.motivoCancelacion?.let { ": $it" } ?: "")
+            } else {
+                "Cancelaste esta reserva"
+            }
+        !esProximo -> return
+        motivoNoCancelable == null -> null
+        else -> motivoNoCancelable
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 14.dp, end = 6.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (texto != null) {
+            Text(
+                text = texto,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = 6.dp)
+            )
+        } else {
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(onClick = onCancelar, enabled = !cancelando) {
+                if (cancelando) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.error,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(16.dp)
+                    )
+                } else {
+                    Text("Cancelar reserva", color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
@@ -278,22 +417,6 @@ private fun InsigniaFecha(fecha: LocalDate, resaltada: Boolean) {
 }
 
 @Composable
-private fun EtiquetaEstado(texto: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-        shape = RoundedCornerShape(50)
-    ) {
-        Text(
-            text = texto,
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        )
-    }
-}
-
-@Composable
 private fun ListaVacia(pestana: PestanaReservas, onVerPaquetes: () -> Unit) {
     val (icono: ImageVector, titulo, detalle) = when (pestana) {
         PestanaReservas.PROXIMOS -> Triple(
@@ -305,6 +428,11 @@ private fun ListaVacia(pestana: PestanaReservas, onVerPaquetes: () -> Unit) {
             Icons.Filled.History,
             "Aún no tienes viajes realizados",
             "Cuando pase la fecha de tus viajes, los verás aquí."
+        )
+        PestanaReservas.CANCELADAS -> Triple(
+            Icons.Filled.EventBusy,
+            "No tienes reservas canceladas",
+            "Si cancelas una reserva, quedará registrada aquí."
         )
     }
     MensajeCentrado {

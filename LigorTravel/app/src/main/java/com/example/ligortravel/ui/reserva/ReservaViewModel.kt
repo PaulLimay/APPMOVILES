@@ -82,10 +82,16 @@ class ReservaViewModel(
     // coerceIn "recorta" el valor al rango permitido: aunque llegue 0 u 11, queda en 1 o 10.
     fun onPersonasChange(personas: Int) {
         _uiState.value = _uiState.value.copy(
-            personas = personas.coerceIn(ReglasReserva.PERSONAS_MIN, ReglasReserva.PERSONAS_MAX),
+            personas = personas.coerceIn(ReglasReserva.PERSONAS_MIN, maximoPersonas()),
             error = null
         )
     }
+
+    // Con pocos cupos el máximo baja; nunca menos de 1 para que el rango de coerceIn sea válido.
+    private fun maximoPersonas(): Int = maxOf(
+        ReglasReserva.PERSONAS_MIN,
+        ReglasReserva.personasMaximas(_uiState.value.paquete?.cupos ?: ReglasReserva.PERSONAS_MAX)
+    )
 
     fun confirmarReserva() {
         val estado = _uiState.value
@@ -102,7 +108,7 @@ class ReservaViewModel(
             _uiState.value = estado.copy(error = "Tu sesión expiró, vuelve a iniciar sesión")
             return
         }
-        val errorValidacion = ReglasReserva.validar(estado.fecha, estado.personas, LocalDate.now())
+        val errorValidacion = ReglasReserva.validar(estado.fecha, estado.personas, LocalDate.now(), paquete.cupos)
         // estado.fecha == null ya lo detecta validar(); se repite aquí para que Kotlin sepa
         // que, de aquí en adelante, fecha no es null (smart cast).
         val fecha = estado.fecha

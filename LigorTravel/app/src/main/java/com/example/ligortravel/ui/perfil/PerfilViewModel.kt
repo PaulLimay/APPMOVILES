@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.ligortravel.data.AuthRepository
 import com.example.ligortravel.data.RegistroUsuario
 import com.example.ligortravel.data.UserRepository
+import com.example.ligortravel.data.AdminRepository
 import com.example.ligortravel.session.SessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,12 +28,15 @@ data class PerfilUiState(
     val mostrarDialogo: Boolean = false,
     val cargandoPassword: Boolean = false,
     val errorPassword: String? = null,
-    val passwordActualizada: Boolean = false
+    val passwordActualizada: Boolean = false,
+    // Solo decide si se muestra el botón del panel; las reglas de Firestore protegen los datos.
+    val esAdmin: Boolean = false
 )
 
 class PerfilViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
-    private val repository: UserRepository = UserRepository()
+    private val repository: UserRepository = UserRepository(),
+    private val adminRepository: AdminRepository = AdminRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PerfilUiState())
@@ -40,6 +44,16 @@ class PerfilViewModel(
 
     init {
         cargarUsuarioActual()
+        verificarAdmin()
+    }
+
+    private fun verificarAdmin() {
+        val uid = SessionManager.usuarioActual?.id ?: return
+        viewModelScope.launch {
+            adminRepository.esAdmin(uid).onSuccess { esAdmin ->
+                _uiState.value = _uiState.value.copy(esAdmin = esAdmin)
+            }
+        }
     }
 
     private fun cargarUsuarioActual() {

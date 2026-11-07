@@ -58,6 +58,8 @@ dependencies {
 
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+    // Para leer el JSON que devuelve Gemini en el Chat con Ligor
+    implementation("com.google.code.gson:gson:2.13.1")
     // Para ver las peticiones/respuestas HTTP en el Logcat (depuración)
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     // Integración de ViewModel con Compose
@@ -69,7 +71,13 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-auth")
+    // Gemini para el Chat con Ligor y App Check para proteger esa llamada
+    implementation("com.google.firebase:firebase-ai")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
     implementation("com.google.android.gms:play-services-auth:21.5.1")
+    // Mapa interactivo con datos de OpenStreetMap (OpenFreeMap): sin API key ni facturación
+    implementation("org.maplibre.gl:android-sdk:13.7.1")
     // Puente entre Task (callbacks de Firebase) y funciones suspend
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 

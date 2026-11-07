@@ -230,7 +230,7 @@ private fun FormularioLogin(state: LoginUiState, viewModel: LoginViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             EtiquetaCampo("CONTRASEÑA")
-            TextButton(onClick = { /* Recuperar contraseña: pendiente */ }) {
+            TextButton(onClick = {}) {
                 Text("¿Olvidaste?", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
             }
         }

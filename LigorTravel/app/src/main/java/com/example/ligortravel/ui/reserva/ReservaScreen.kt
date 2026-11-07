@@ -64,7 +64,7 @@ import com.example.ligortravel.data.Paquete
 import com.example.ligortravel.ui.components.BotonVolver
 import com.example.ligortravel.ui.components.PantallaEstado
 import com.example.ligortravel.ui.components.Seccion
-import com.example.ligortravel.ui.home.imagenDeExperiencia
+import com.example.ligortravel.ui.components.ImagenCatalogo
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -154,7 +154,8 @@ private fun FormularioReserva(
             Seccion("Número de personas") {
                 SelectorPersonas(
                     personas = uiState.personas,
-                    habilitado = !uiState.cargando,
+                    maximo = ReglasReserva.personasMaximas(paquete.cupos),
+                    habilitado = !uiState.cargando && paquete.cupos > 0,
                     onPersonasChange = onPersonasChange
                 )
             }
@@ -182,6 +183,7 @@ private fun FormularioReserva(
         BarraConfirmar(
             total = uiState.total,
             cargando = uiState.cargando,
+            habilitado = paquete.cupos > 0,
             onConfirmar = onConfirmar
         )
     }
@@ -235,15 +237,11 @@ private fun ResumenPaquete(paquete: Paquete) {
                 .background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center
         ) {
-            val imagenRes = imagenDeExperiencia(paquete.imagen)
-            if (imagenRes != null) {
-                Image(
-                    painter = painterResource(imagenRes),
-                    contentDescription = paquete.titulo,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
+            ImagenCatalogo(
+                referencia = paquete.imagen,
+                contentDescription = paquete.titulo,
+                modifier = Modifier.fillMaxSize()
+            ) {
                 Icon(
                     imageVector = Icons.Filled.Image,
                     contentDescription = null,
@@ -354,7 +352,7 @@ private fun DialogoCalendario(
 
 // "Stepper": botones − y + que se deshabilitan al llegar a los límites.
 @Composable
-private fun SelectorPersonas(personas: Int, habilitado: Boolean, onPersonasChange: (Int) -> Unit) {
+private fun SelectorPersonas(personas: Int, maximo: Int, habilitado: Boolean, onPersonasChange: (Int) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -371,7 +369,11 @@ private fun SelectorPersonas(personas: Int, habilitado: Boolean, onPersonasChang
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Máximo ${ReglasReserva.PERSONAS_MAX} por reserva",
+                text = when {
+                    maximo <= 0 -> "Paquete agotado"
+                    maximo < ReglasReserva.PERSONAS_MAX -> "Quedan $maximo cupos"
+                    else -> "Máximo ${ReglasReserva.PERSONAS_MAX} por reserva"
+                },
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
             )
@@ -391,7 +393,7 @@ private fun SelectorPersonas(personas: Int, habilitado: Boolean, onPersonasChang
         )
         BotonCantidad(
             icono = { Icon(Icons.Filled.Add, contentDescription = "Agregar una persona") },
-            habilitado = habilitado && personas < ReglasReserva.PERSONAS_MAX,
+            habilitado = habilitado && personas < maximo,
             onClick = { onPersonasChange(personas + 1) }
         )
     }
@@ -482,7 +484,7 @@ private fun AvisoPagoPendiente() {
 }
 
 @Composable
-private fun BarraConfirmar(total: Int, cargando: Boolean, onConfirmar: () -> Unit) {
+private fun BarraConfirmar(total: Int, cargando: Boolean, habilitado: Boolean, onConfirmar: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surface) {
         Row(
             modifier = Modifier
@@ -506,7 +508,7 @@ private fun BarraConfirmar(total: Int, cargando: Boolean, onConfirmar: () -> Uni
             }
             // Mientras se guarda, el botón se deshabilita y muestra un indicador de carga: así el
             // usuario sabe que algo está pasando y no puede enviar la reserva dos veces.
-            Button(onClick = onConfirmar, enabled = !cargando) {
+            Button(onClick = onConfirmar, enabled = habilitado && !cargando) {
                 if (cargando) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),

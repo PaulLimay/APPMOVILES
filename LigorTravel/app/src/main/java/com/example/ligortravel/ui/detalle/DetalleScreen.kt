@@ -57,7 +57,7 @@ import com.example.ligortravel.ui.components.BotonVolver
 import com.example.ligortravel.ui.components.FichaDato
 import com.example.ligortravel.ui.components.PantallaEstado
 import com.example.ligortravel.ui.components.Seccion
-import com.example.ligortravel.ui.home.imagenDeExperiencia
+import com.example.ligortravel.ui.components.ImagenCatalogo
 
 @Composable
 fun DetalleScreen(
@@ -78,7 +78,8 @@ fun DetalleScreen(
                 fotos = uiState.fotos,
                 fotoSeleccionada = uiState.fotoSeleccionada,
                 onSeleccionarFoto = viewModel::onSeleccionarFoto,
-                onVolver = onVolver
+                onVolver = onVolver,
+                resenas = { SeccionResenas(experiencia, uiState, viewModel) }
             )
             uiState.cargando -> PantallaEstado(onVolver) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -101,7 +102,9 @@ private fun ContenidoDetalle(
     fotos: List<String>,
     fotoSeleccionada: Int,
     onSeleccionarFoto: (Int) -> Unit,
-    onVolver: () -> Unit
+    onVolver: () -> Unit,
+    // La sección de reseñas llega como composable para no pasar aquí todo su estado.
+    resenas: @Composable () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -154,6 +157,10 @@ private fun ContenidoDetalle(
             Seccion("Ubicación") {
                 TarjetaUbicacion(experiencia)
             }
+
+            Seccion("Reseñas") {
+                resenas()
+            }
         }
     }
 }
@@ -166,15 +173,11 @@ private fun FotoPrincipal(nombreImagen: String?, titulo: String, onVolver: () ->
             .height(300.dp)
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        val imagenRes = imagenDeExperiencia(nombreImagen)
-        if (imagenRes != null) {
-            Image(
-                painter = painterResource(imagenRes),
-                contentDescription = titulo,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
+        ImagenCatalogo(
+            referencia = nombreImagen,
+            contentDescription = titulo,
+            modifier = Modifier.fillMaxSize()
+        ) {
             Icon(
                 imageVector = Icons.Filled.Image,
                 contentDescription = null,
@@ -250,7 +253,9 @@ private fun EncabezadoDetalle(experiencia: Experiencia) {
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = experiencia.rating.toString(),
+                // Promedio real de las reseñas, o "Nuevo" si todavía no tiene.
+                text = ReglasResenas.textoPromedio(experiencia) +
+                    if (experiencia.totalResenas > 0) " (${experiencia.totalResenas})" else "",
                 color = MaterialTheme.colorScheme.tertiary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
@@ -315,15 +320,11 @@ private fun Galeria(fotos: List<String>, fotoSeleccionada: Int, onSeleccionarFot
                     .clickable { onSeleccionarFoto(indice) },
                 contentAlignment = Alignment.Center
             ) {
-                val imagenRes = imagenDeExperiencia(nombre)
-                if (imagenRes != null) {
-                    Image(
-                        painter = painterResource(imagenRes),
-                        contentDescription = "Foto ${indice + 1}",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
+                ImagenCatalogo(
+                    referencia = nombre,
+                    contentDescription = "Foto ${indice + 1}",
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     Icon(
                         imageVector = Icons.Filled.Image,
                         contentDescription = null,

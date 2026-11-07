@@ -65,6 +65,26 @@ class ReglasReservaTest {
     }
 
     @Test
+    fun cupos_paqueteAgotado_noSePuedeReservar() {
+        assertEquals("Este paquete está agotado", ReglasReserva.validar(hoy.plusDays(5), 1, hoy, cupos = 0))
+    }
+
+    @Test
+    fun cupos_masPersonasQueCupos_esInvalido() {
+        assertEquals(
+            "Solo quedan 3 cupos para este paquete",
+            ReglasReserva.validar(hoy.plusDays(5), 4, hoy, cupos = 3)
+        )
+        assertNull(ReglasReserva.validar(hoy.plusDays(5), 3, hoy, cupos = 3))
+    }
+
+    @Test
+    fun personasMaximas_seLimitaPorCuposYPorElTope() {
+        assertEquals(3, ReglasReserva.personasMaximas(3))
+        assertEquals(ReglasReserva.PERSONAS_MAX, ReglasReserva.personasMaximas(50))
+    }
+
+    @Test
     fun conversionUtc_idaYVuelta_conservaElDia() {
         val fecha = LocalDate.of(2026, 12, 31)
         assertEquals(fecha, millisUtcALocalDate(fecha.aMillisUtc()))

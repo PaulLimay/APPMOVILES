@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Hiking
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
@@ -56,7 +57,7 @@ import com.example.ligortravel.ui.components.BotonVolver
 import com.example.ligortravel.ui.components.FichaDato
 import com.example.ligortravel.ui.components.PantallaEstado
 import com.example.ligortravel.ui.components.Seccion
-import com.example.ligortravel.ui.home.imagenDeExperiencia
+import com.example.ligortravel.ui.components.ImagenCatalogo
 
 @Composable
 fun DetallePaqueteScreen(
@@ -132,6 +133,12 @@ private fun ContenidoDetallePaquete(
                         valor = resumen.experiencias.size.toString(),
                         modifier = Modifier.weight(1f)
                     )
+                    FichaDato(
+                        icono = Icons.Filled.Groups,
+                        etiqueta = "Cupos",
+                        valor = if (paquete.cupos > 0) paquete.cupos.toString() else "Agotado",
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
                 if (paquete.descripcion.isNotBlank()) {
@@ -161,7 +168,7 @@ private fun ContenidoDetallePaquete(
             }
         }
 
-        BarraReserva(precio = paquete.precio, onReservar = onReservar)
+        BarraReserva(precio = paquete.precio, agotado = paquete.cupos <= 0, onReservar = onReservar)
     }
 }
 
@@ -173,15 +180,11 @@ private fun Portada(paquete: Paquete, onVolver: () -> Unit) {
             .height(260.dp)
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        val imagenRes = imagenDeExperiencia(paquete.imagen)
-        if (imagenRes != null) {
-            Image(
-                painter = painterResource(imagenRes),
-                contentDescription = paquete.titulo,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
+        ImagenCatalogo(
+            referencia = paquete.imagen,
+            contentDescription = paquete.titulo,
+            modifier = Modifier.fillMaxSize()
+        ) {
             Icon(
                 imageVector = Icons.Filled.Image,
                 contentDescription = null,
@@ -402,7 +405,7 @@ private fun FilaPrecio(
 
 // Barra fija inferior: el precio siempre visible y el acceso directo a reservar.
 @Composable
-private fun BarraReserva(precio: Int, onReservar: () -> Unit) {
+private fun BarraReserva(precio: Int, agotado: Boolean, onReservar: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surface) {
         Row(
             modifier = Modifier
@@ -425,10 +428,10 @@ private fun BarraReserva(precio: Int, onReservar: () -> Unit) {
                     fontWeight = FontWeight.Bold
                 )
             }
-            Button(onClick = onReservar) {
+            Button(onClick = onReservar, enabled = !agotado) {
                 Icon(imageVector = Icons.Filled.EventAvailable, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Reservar")
+                Text(if (agotado) "Agotado" else "Reservar")
             }
         }
     }

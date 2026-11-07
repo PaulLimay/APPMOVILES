@@ -56,6 +56,15 @@ class HistorialReservasTest {
     }
 
     @Test
+    fun canceladas_vanAparteAunqueSeanProximas() {
+        val cancelada = reserva("c", hoy.plusDays(3)).copy(estado = Reserva.ESTADO_CANCELADA)
+        val separadas = separarReservas(listOf(cancelada, reserva("p", hoy.plusDays(5))), hoy)
+
+        assertEquals(listOf("p"), separadas.proximas.map { it.reserva.id })
+        assertEquals(listOf("c"), separadas.canceladas.map { it.reserva.id })
+    }
+
+    @Test
     fun reservaSinFecha_seDescarta() {
         val resultado = separarReservas(listOf(reserva("sin_fecha", null)), hoy)
         assertTrue(resultado.proximas.isEmpty())

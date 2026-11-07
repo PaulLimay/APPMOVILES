@@ -1,0 +1,265 @@
+rules_version = '2';
+
+// Copia de referencia de las reglas publicadas en la consola de Firebase
+// (Firestore Database > Reglas). Si cambias algo aquí, publícalo también allá.
+// Los límites deben coincidir con ReglasAdmin.kt y ReglasReserva.kt.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    // El rol de administrador es un documento admins/{uid} que solo se crea desde la consola.
+    function esAdmin() {
+      return autenticado() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function textoValido(valor, minimo, maximo) {
+      return valor is string && valor.size() >= minimo && valor.size() <= maximo;
+    }
+
+    match /admins/{uid} {
+      allow read: if autenticado() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /usuarios/{uid} {
+      // El administrador lee los perfiles para saber a quién cobrar; solo el dueño los edita.
+      allow read: if autenticado() && (request.auth.uid == uid || esAdmin());
+      allow write: if autenticado() && request.auth.uid == uid;
+    }
+
+    // Fotos subidas por el administrador: un JPEG comprimido por documento.
+    match /fotos/{fotoId} {
+      allow read: if autenticado();
+      allow create, update: if esAdmin()
+        && request.resource.data.keys().hasOnly(['datos'])
+        && request.resource.data.datos is bytes
+        && request.resource.data.datos.size() <= 750000;
+      allow delete: if esAdmin();
+    }
+
+    function destinoValido(d) {
+      return textoValido(d.titulo, 3, 80)
+        && textoValido(d.ubicacion, 1, 120)
+        && d.precioDesde is int && d.precioDesde >= 1 && d.precioDesde <= 100000
+        && d.descripcion is string && d.descripcion.size() <= 1000
+        && d.orden is int
+        && d.imagen is string;
+    }
+
+    function rutaReserva(id) {
+      return /databases/$(database)/documents/reservas/$(id);
+    }
+
+    function rutaDestino(id) {
+      return /databases/$(database)/documents/experiencias/$(id);
+    }
+
+    function rutaResena(destinoId, uid) {
+      return /databases/$(database)/documents/experiencias/$(destinoId)/resenas/$(uid);
+    }
+
+    // Estrellas y conteo que aporta la reseña de un usuario antes (get) y después (getAfter) de
+    // la escritura: 0 si no existía o si se borró.
+    function estrellasAntes(destinoId, uid) {
+      return exists(rutaResena(destinoId, uid)) ? get(rutaResena(destinoId, uid)).data.estrellas : 0;
+    }
+    function estrellasDespues(destinoId, uid) {
+      return existsAfter(rutaResena(destinoId, uid)) ? getAfter(rutaResena(destinoId, uid)).data.estrellas : 0;
+    }
+    function conteoAntes(destinoId, uid) {
+      return exists(rutaResena(destinoId, uid)) ? 1 : 0;
+    }
+    function conteoDespues(destinoId, uid) {
+      return existsAfter(rutaResena(destinoId, uid)) ? 1 : 0;
+    }
+
+    // Un turista solo toca un destino para actualizar su promedio, en la misma transacción que
+    // crea, edita o borra SU reseña, y la suma cambia exactamente lo que cambió esa reseña.
+    function cambioDeCalificacion(destinoId) {
+      let uid = request.auth.uid;
+      return autenticado()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sumaEstrellas', 'totalResenas'])
+        && request.resource.data.sumaEstrellas == resource.data.get('sumaEstrellas', 0)
+             + estrellasDespues(destinoId, uid) - estrellasAntes(destinoId, uid)
+        && request.resource.data.totalResenas == resource.data.get('totalResenas', 0)
+             + conteoDespues(destinoId, uid) - conteoAntes(destinoId, uid);
+    }
+
+    match /experiencias/{id} {
+      allow read: if autenticado();
+      allow create: if esAdmin() && destinoValido(request.resource.data);
+      allow update: if (esAdmin() && destinoValido(request.resource.data)) || cambioDeCalificacion(id);
+      allow delete: if esAdmin();
+
+      // Una reseña por usuario y destino: el id del documento es el uid del autor.
+      match /resenas/{uid} {
+        function resenaValida(r) {
+          return r.keys().hasOnly(['usuarioId', 'nombre', 'estrellas', 'comentario', 'reservaId', 'creadaEn', 'actualizadaEn'])
+            && r.usuarioId == request.auth.uid
+            && textoValido(r.nombre, 1, 40)
+            && r.estrellas is int && r.estrellas >= 1 && r.estrellas <= 5
+            && textoValido(r.comentario, 10, 500)
+            && r.reservaId is string;
+        }
+
+        // Solo quien ya viajó: la reserva es suya, no está cancelada, su fecha ya pasó y su
+        // paquete incluye este destino.
+        function viajo(reservaId) {
+          let reserva = get(rutaReserva(reservaId)).data;
+          return reserva.usuarioId == request.auth.uid
+            && reserva.estado != 'cancelada'
+            && reserva.fechaViaje < request.time
+            && get(/databases/$(database)/documents/paquetes/$(reserva.paqueteId)).data.experienciaIds.hasAny([id]);
+        }
+
+        // La misma transacción debe dejar la suma y el total del destino al día.
+        function promedioActualizado() {
+          let antes = get(rutaDestino(id)).data;
+          let despues = getAfter(rutaDestino(id)).data;
+          return despues.get('sumaEstrellas', 0) == antes.get('sumaEstrellas', 0)
+              + estrellasDespues(id, uid) - estrellasAntes(id, uid)
+            && despues.get('totalResenas', 0) == antes.get('totalResenas', 0)
+              + conteoDespues(id, uid) - conteoAntes(id, uid);
+        }
+
+        allow read: if autenticado();
+        allow create: if autenticado() && request.auth.uid == uid
+          && resenaValida(request.resource.data)
+          && request.resource.data.creadaEn == request.time
+          && !('actualizadaEn' in request.resource.data)
+          && viajo(request.resource.data.reservaId)
+          && promedioActualizado();
+        allow update: if autenticado() && request.auth.uid == uid
+          && resenaValida(request.resource.data)
+          && request.resource.data.creadaEn == resource.data.creadaEn
+          && request.resource.data.actualizadaEn == request.time
+          && viajo(request.resource.data.reservaId)
+          && promedioActualizado();
+        // El autor borra la suya; el administrador puede borrar cualquiera (moderación).
+        allow delete: if autenticado() && (request.auth.uid == uid || esAdmin()) && promedioActualizado();
+      }
+    }
+
+    function paqueteValido(p) {
+      return textoValido(p.titulo, 3, 80)
+        && p.precio is int && p.precio >= 1 && p.precio <= 100000
+        && p.cupos is int && p.cupos >= 0 && p.cupos <= 1000
+        && p.experienciaIds is list && p.experienciaIds.size() >= 1
+        && p.descripcion is string && p.descripcion.size() <= 1000
+        && p.orden is int
+        && p.imagen is string;
+    }
+
+    // Un usuario normal solo puede tocar un paquete para descontar cupos, y solo en la misma
+    // transacción que crea su reserva: la reserva no existía antes (exists) y sí existe después
+    // (getAfter), es suya, es de este paquete y se descuentan exactamente sus personas.
+    function descuentoDeCupos(paqueteId) {
+      let reservaId = request.resource.data.ultimaReservaId;
+      let reserva = getAfter(rutaReserva(reservaId)).data;
+      return autenticado()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cupos', 'ultimaReservaId'])
+        && reservaId is string
+        && !exists(rutaReserva(reservaId))
+        && reserva.paqueteId == paqueteId
+        && reserva.usuarioId == request.auth.uid
+        && request.resource.data.cupos == resource.data.cupos - reserva.personas
+        && request.resource.data.cupos >= 0;
+    }
+
+    // Al cancelar se devuelven exactamente las personas de la reserva, y solo si en la misma
+    // transacción esa reserva pasa de no cancelada (get) a cancelada (getAfter).
+    function liberacionDeCupos(paqueteId) {
+      let reservaId = request.resource.data.ultimaReservaId;
+      let antes = get(rutaReserva(reservaId)).data;
+      let despues = getAfter(rutaReserva(reservaId)).data;
+      return autenticado()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cupos', 'ultimaReservaId'])
+        && reservaId is string
+        && antes.paqueteId == paqueteId
+        && antes.estado != 'cancelada'
+        && despues.estado == 'cancelada'
+        && request.resource.data.cupos == resource.data.cupos + antes.personas;
+    }
+
+    match /paquetes/{id} {
+      allow read: if autenticado();
+      allow create: if esAdmin() && paqueteValido(request.resource.data);
+      allow update: if (esAdmin() && paqueteValido(request.resource.data))
+        || descuentoDeCupos(id)
+        || liberacionDeCupos(id);
+      allow delete: if esAdmin();
+    }
+
+    match /reservas/{reservaId} {
+      function rutaPaquete() {
+        return /databases/$(database)/documents/paquetes/$(request.resource.data.paqueteId);
+      }
+
+      // Cobro simulado: solo el administrador, solo sobre reservas pendientes y solo estos campos.
+      function pagoRegistrado() {
+        return esAdmin()
+          && resource.data.estado == 'pendiente_pago'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'pagadaEn', 'metodoPago'])
+          && request.resource.data.estado == 'pagada'
+          && request.resource.data.pagadaEn == request.time
+          && request.resource.data.metodoPago in ['efectivo', 'transferencia', 'tarjeta', 'yape_plin'];
+      }
+
+      // El administrador cancela cualquier reserva; el turista, solo las suyas pendientes de pago
+      // y hasta 48 horas antes del viaje (mismo plazo que ReglasCancelacion.kt).
+      function quienPuedeCancelar() {
+        return (esAdmin() && request.resource.data.canceladaPor == 'admin')
+          || (resource.data.usuarioId == request.auth.uid
+              && request.resource.data.canceladaPor == 'usuario'
+              && resource.data.estado == 'pendiente_pago'
+              && resource.data.fechaViaje > request.time + duration.value(48, 'h'));
+      }
+
+      // Si el paquete todavía existe, la misma transacción debe devolverle los cupos.
+      function cuposDevueltos(reservaId) {
+        let paquete = /databases/$(database)/documents/paquetes/$(resource.data.paqueteId);
+        return !exists(paquete)
+          || (getAfter(paquete).data.ultimaReservaId == reservaId
+              && getAfter(paquete).data.cupos == get(paquete).data.cupos + resource.data.personas);
+      }
+
+      function cancelacion(reservaId) {
+        return autenticado()
+          && resource.data.estado != 'cancelada'
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['estado', 'canceladaEn', 'canceladaPor', 'motivoCancelacion'])
+          && request.resource.data.estado == 'cancelada'
+          && request.resource.data.canceladaEn == request.time
+          && (!('motivoCancelacion' in request.resource.data)
+              || (request.resource.data.motivoCancelacion is string
+                  && request.resource.data.motivoCancelacion.size() <= 300))
+          && quienPuedeCancelar()
+          && cuposDevueltos(reservaId);
+      }
+
+      allow read: if autenticado() && (resource.data.usuarioId == request.auth.uid || esAdmin());
+      allow create: if autenticado()
+        && request.resource.data.keys().hasOnly(['usuarioId', 'paqueteId', 'paqueteTitulo', 'fechaViaje',
+             'personas', 'precioUnitario', 'total', 'estado', 'creadaEn'])
+        && request.resource.data.usuarioId == request.auth.uid
+        && request.resource.data.estado == 'pendiente_pago'
+        && request.resource.data.personas is int
+        && request.resource.data.personas >= 1 && request.resource.data.personas <= 10
+        && request.resource.data.fechaViaje is timestamp
+        && request.resource.data.fechaViaje > request.time - duration.value(1, 'd')
+        && request.resource.data.fechaViaje < request.time + duration.value(367, 'd')
+        && request.resource.data.precioUnitario == get(rutaPaquete()).data.precio
+        && request.resource.data.total == request.resource.data.precioUnitario * request.resource.data.personas
+        && request.resource.data.creadaEn == request.time
+        // La misma transacción debe descontar los cupos del paquete por esta reserva.
+        && getAfter(rutaPaquete()).data.ultimaReservaId == reservaId
+        && getAfter(rutaPaquete()).data.cupos == get(rutaPaquete()).data.cupos - request.resource.data.personas;
+      allow update: if pagoRegistrado() || cancelacion(reservaId);
+      // Las reservas nunca se borran: una cancelada queda como historial.
+      allow delete: if false;
+    }
+  }
+}

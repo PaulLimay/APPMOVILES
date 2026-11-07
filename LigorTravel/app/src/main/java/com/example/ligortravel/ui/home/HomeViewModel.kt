@@ -1,13 +1,9 @@
 package com.example.ligortravel.ui.home
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.ligortravel.data.DetallesIniciales
 import com.example.ligortravel.data.Experiencia
 import com.example.ligortravel.data.ExperienciaRepository
-import com.example.ligortravel.data.PaqueteRepository
-import com.example.ligortravel.data.PaquetesIniciales
 import com.example.ligortravel.session.SessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,40 +35,12 @@ class HomeViewModel(
 
     init {
         cargarUsuarioActual()
-        sembrarDatosTemporales()
         observarExperiencias()
     }
 
     private fun cargarUsuarioActual() {
         val usuario = SessionManager.usuarioActual ?: return
         _uiState.value = _uiState.value.copy(nombre = usuario.nombre)
-    }
-
-    // Temporal: siembra los detalles de las experiencias (DetallesIniciales.kt) y los paquetes
-    // (PaquetesIniciales.kt). El resultado se ve en Logcat filtrando por "Siembra".
-    private fun sembrarDatosTemporales() {
-        viewModelScope.launch {
-            repository.completarDetallesSiFaltan(DetallesIniciales.porId)
-                .onSuccess { escribio ->
-                    Log.d("Siembra", if (escribio) "Detalles subidos a Firestore" else "Ya estaban, no se escribió nada")
-                }
-                .onFailure { Log.e("Siembra", "Falló la siembra de detalles", it) }
-        }
-        viewModelScope.launch {
-            val paqueteRepository = PaqueteRepository()
-            paqueteRepository.sembrarSiEstaVacia(PaquetesIniciales.lista)
-                .onSuccess { escribio ->
-                    Log.d("Siembra", if (escribio) "Paquetes subidos a Firestore" else "Paquetes ya estaban, no se escribió nada")
-                }
-                .onFailure { Log.e("Siembra", "Falló la siembra de paquetes", it) }
-            // Va después (en la misma corrutina) porque update() falla si el documento aún no
-            // existe: primero hay que asegurarse de que los paquetes estén creados.
-            paqueteRepository.completarDetallesSiFaltan(PaquetesIniciales.lista)
-                .onSuccess { escribio ->
-                    Log.d("Siembra", if (escribio) "Detalles de paquetes subidos a Firestore" else "Detalles de paquetes ya estaban, no se escribió nada")
-                }
-                .onFailure { Log.e("Siembra", "Falló la siembra de detalles de paquetes", it) }
-        }
     }
 
     private fun observarExperiencias() {

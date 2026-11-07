@@ -27,5 +27,12 @@ data class Paquete(
     val descripcion: String = "",
     // Servicios propios del paquete (hotel, traslados, asistencia...), aparte de lo que ya
     // incluye cada experiencia por separado.
-    val serviciosIncluidos: List<String> = emptyList()
+    val serviciosIncluidos: List<String> = emptyList(),
+
+    // --- Gestión del administrador ---
+    // Lugares que quedan. Cada reserva los descuenta en la misma transacción que la crea.
+    val cupos: Int = 0,
+    // Id de la última reserva que descontó cupos. Lo exigen las reglas para comprobar que el
+    // descuento corresponde a una reserva real; la app no lo muestra.
+    val ultimaReservaId: String? = null
 )

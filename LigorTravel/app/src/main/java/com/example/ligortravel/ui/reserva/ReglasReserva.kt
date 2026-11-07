@@ -21,17 +21,22 @@ object ReglasReserva {
 
     fun fechaMaxima(hoy: LocalDate): LocalDate = hoy.plusDays(DIAS_MAXIMOS_ANTICIPACION)
 
+    // No se puede reservar para más personas que los cupos que quedan.
+    fun personasMaximas(cupos: Int): Int = minOf(PERSONAS_MAX, cupos)
+
     fun esFechaValida(fecha: LocalDate, hoy: LocalDate): Boolean =
         !fecha.isBefore(fechaMinima(hoy)) && !fecha.isAfter(fechaMaxima(hoy))
 
     // Devuelve el mensaje de error, o null si todo está bien (mismo estilo que
     // RegistroViewModel.validar).
-    fun validar(fecha: LocalDate?, personas: Int, hoy: LocalDate): String? = when {
+    fun validar(fecha: LocalDate?, personas: Int, hoy: LocalDate, cupos: Int = PERSONAS_MAX): String? = when {
+        cupos <= 0 -> "Este paquete está agotado"
         fecha == null -> "Elige la fecha del viaje"
         fecha.isBefore(fechaMinima(hoy)) -> "La fecha del viaje debe ser a partir de mañana"
         fecha.isAfter(fechaMaxima(hoy)) -> "Solo puedes reservar con hasta un año de anticipación"
         personas !in PERSONAS_MIN..PERSONAS_MAX ->
             "El número de personas debe estar entre $PERSONAS_MIN y $PERSONAS_MAX"
+        personas > cupos -> "Solo quedan $cupos cupos para este paquete"
         else -> null
     }
 }
